@@ -36,23 +36,7 @@ export function sanitizePayload(
 
   // 3. Handle thinking block
   if (sanitized.thinking) {
-    const isOpus = isOpusModel(sanitized.model)
-
-    if (isOpus) {
-      // opus models: always use adaptive (enabled not supported on opus-4.7+)
-      consola.debug("opus: Converting thinking to adaptive")
-      sanitized.thinking = { type: "adaptive" } as typeof sanitized.thinking
-    }
-
-    // All models: strip budget_tokens from thinking
-    if ("budget_tokens" in sanitized.thinking) {
-      consola.debug("Stripping budget_tokens from thinking")
-      const { budget_tokens: _, ...rest } = sanitized.thinking as Record<
-        string,
-        unknown
-      >
-      sanitized.thinking = rest as typeof sanitized.thinking
-    }
+    sanitizeThinking(sanitized)
   }
 
   // 4. Handle output_config.effort for opus
@@ -92,6 +76,31 @@ export function sanitizePayload(
   }
 
   return sanitized
+}
+
+function sanitizeThinking(
+  sanitized: AnthropicMessagesPayload & Record<string, unknown>,
+): void {
+  if (!sanitized.thinking) return
+
+  if (isOpusModel(sanitized.model)) {
+    consola.debug("opus: Converting thinking to adaptive")
+    sanitized.thinking = { type: "adaptive" } as typeof sanitized.thinking
+  }
+
+  const t = sanitized.thinking as Record<string, unknown>
+  if (t.type === "adaptive") {
+    // Copilot rejects budget_tokens/budget_tokens_max on adaptive
+    if ("budget_tokens" in t) {
+      consola.debug("Stripping budget_tokens from adaptive thinking")
+      delete t.budget_tokens
+    }
+    if ("budget_tokens_max" in t) {
+      consola.debug("Stripping budget_tokens_max from adaptive thinking")
+      delete t.budget_tokens_max
+    }
+  }
+  // For "enabled" type, keep budget_tokens (Copilot requires it)
 }
 
 function normalizeModelName(model: string): string {

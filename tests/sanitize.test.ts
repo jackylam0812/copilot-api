@@ -71,12 +71,12 @@ describe("sanitizePayload", () => {
   })
 
   describe("thinking sanitization", () => {
-    test("strips budget_tokens from thinking", () => {
+    test("preserves budget_tokens for enabled thinking", () => {
       const result = sanitizePayload({
         ...basePayload,
         thinking: { type: "enabled", budget_tokens: 5000 },
       })
-      expect(result.thinking).toEqual({ type: "enabled" })
+      expect(result.thinking).toEqual({ type: "enabled", budget_tokens: 5000 })
     })
 
     test("converts enabled to adaptive for opus models", () => {
