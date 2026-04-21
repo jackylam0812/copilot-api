@@ -39,7 +39,7 @@ export function sanitizePayload(
     const isOpus = isOpusModel(sanitized.model)
 
     if (isOpus) {
-      // opus models: thinking.enabled → adaptive
+      // opus models: always use adaptive (enabled not supported on opus-4.7+)
       consola.debug("opus: Converting thinking to adaptive")
       sanitized.thinking = { type: "adaptive" } as typeof sanitized.thinking
     }
@@ -105,6 +105,17 @@ function normalizeModelName(model: string): string {
 
 function isOpusModel(model: string): boolean {
   return model.includes("opus")
+}
+
+/**
+ * Models that support thinking.type = "adaptive".
+ * Older models (claude-sonnet-4 without version suffix) only support enabled/disabled.
+ */
+function _supportsAdaptiveThinking(model: string): boolean {
+  // Models with version suffix (4.5, 4.6, etc.) support adaptive
+  return (
+    /claude-[a-z]+-4\.[5-9]/.test(model) || /claude-[a-z]+-[5-9]/.test(model)
+  )
 }
 
 /**
